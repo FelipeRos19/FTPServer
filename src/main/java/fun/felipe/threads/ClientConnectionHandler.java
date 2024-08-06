@@ -19,8 +19,9 @@ public class ClientConnectionHandler implements Runnable {
     public void run() {
         System.out.println("Estabelecendo Conexão com o endereço: " + this.socket.getInetAddress().getHostAddress());
         try (BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-
             String request = input.readLine();
+            if (request == null) return;
+
             JsonObject jsonRequest = JsonParser.parseString(request).getAsJsonObject();
             String command = jsonRequest.get("command").getAsString();
 

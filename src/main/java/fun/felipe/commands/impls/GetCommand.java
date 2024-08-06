@@ -7,7 +7,6 @@ import fun.felipe.utils.HashUtils;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Arrays;
 
 public class GetCommand extends CommandBase {
 
@@ -17,34 +16,33 @@ public class GetCommand extends CommandBase {
 
     @Override
     public void execute(JsonObject request, Socket socket) {
-        String fileName = request.get("file_name").getAsString();
-        File file = new File(Server.getInstance().getConfig().directory_path(), fileName);
-        boolean error = false;
+        System.out.println("Executando o comando Get!");
+        System.out.println(request.toString());
+       try (DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
+           String fileName = request.get("file").getAsString();
+           File file = new File(Server.getInstance().getConfig().directory_path() + "/" + fileName);
 
-        if (!file.exists()) {
-            JsonObject responseError = new JsonObject();
-            responseError.addProperty("file", fileName);
-            responseError.addProperty("operatiion", "get");
-            responseError.addProperty("status", "fail");
-            responseError.addProperty("message", "File not found.");
+           if (!file.exists()) {
+               System.out.println("BAH GURI NÃO ACHEI ESSE ARQUIVITO PRA TU!");
+           }
 
-            /*
-            try (BufferedWriter output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))) {
-                output.write(responseError.toString());
-                output.newLine();
-                output.flush();
-            } catch (IOException exception) {
-                exception.printStackTrace(System.err);
-            }
-             */
-        }
+           String fileHash = HashUtils.calculateFileHash(file);
 
-        String fileHash = HashUtils.calculateFileHash(file);
-        JsonObject response = new JsonObject();
-        response.addProperty("file", fileName);
-        response.addProperty("operation", "get");
-        response.addProperty("hash", fileHash);
+           JsonObject response = new JsonObject();
+           response.addProperty("file", fileName);
+           response.addProperty("operation", "get");
+           response.addProperty("hash", fileHash);
+           out.writeUTF(response.toString());
 
-
+           try (InputStream in = new FileInputStream(file)) {
+               byte[] buffer = new byte[4096];
+               int bytesRead;
+               while ((bytesRead = in.read(buffer)) != -1) {
+                   out.write(buffer, 0, bytesRead);
+               }
+           }
+       } catch (IOException exception) {
+           throw new RuntimeException(exception);
+       }
     }
 }
